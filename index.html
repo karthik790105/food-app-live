@@ -3,85 +3,178 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Food Delivery App</title>
+  <title>Local Taste - Food Delivery</title>
   <style>
-    body { font-family: Arial, sans-serif; background: #f4f4f9; padding: 20px; }
-    h1 { text-align: center; color: #333; }
-    .grid { display: flex; gap: 20px; justify-content: center; flex-wrap: wrap; margin-top: 20px; }
-    .card { background: white; padding: 20px; border-radius: 10px; width: 220px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
-    .card h3 { margin: 0 0 10px 0; color: #2c3e50; }
-    .price { font-weight: bold; color: #27ae60; font-size: 1.1em; }
+    * { box-sizing: border-box; }
+    body { font-family: Arial, sans-serif; background: #f4f4f9; margin: 0; padding: 20px; }
+    h1 { text-align: center; color: #333; margin-bottom: 5px; }
+    .nav { text-align: center; margin-bottom: 20px; }
+    .nav a { color: #e67e22; text-decoration: none; font-weight: bold; }
+
+    .main-layout { display: flex; gap: 20px; max-width: 1100px; margin: 0 auto; flex-wrap: wrap; }
+    .menu-section { flex: 2; min-width: 300px; }
+    .cart-section { flex: 1; min-width: 280px; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); height: fit-content; position: sticky; top: 20px; }
+
+    .grid { display: flex; gap: 20px; flex-wrap: wrap; }
+    .card { background: white; padding: 15px; border-radius: 10px; width: 220px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); display: flex; flex-direction: column; justify-content: space-between; }
+    .card img { width: 100%; height: 130px; object-fit: cover; border-radius: 8px; }
+    .card h3 { margin: 10px 0 5px 0; color: #2c3e50; font-size: 1.1em; }
+    .price { font-weight: bold; color: #27ae60; font-size: 1.1em; margin: 5px 0; }
     .tag { background: #eee; padding: 3px 8px; border-radius: 5px; font-size: 0.8em; }
-    .btn { margin-top: 15px; width: 100%; padding: 8px; background: #e67e22; color: white; border: none; border-radius: 5px; cursor: pointer; }
+    
+    .btn { margin-top: 10px; width: 100%; padding: 8px; background: #e67e22; color: white; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; }
     .btn:hover { background: #d35400; }
+    .btn-checkout { background: #27ae60; margin-top: 15px; }
+    .btn-checkout:hover { background: #219150; }
+
+    .cart-item { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; border-bottom: 1px solid #eee; padding-bottom: 8px; }
+    .cart-item-title { font-weight: bold; font-size: 0.95em; }
+    .cart-total { font-size: 1.2em; font-weight: bold; margin-top: 15px; text-align: right; color: #2c3e50; }
   </style>
 </head>
 <body>
 
-  <h1>🍕 Food Menu</h1>
-  <div id="food-container" class="grid">Loading menu items...</div>
+  <h1>🍕 Local Taste</h1>
+  <div class="nav"><a href="orders.html">Go to Admin Orders Dashboard →</a></div>
 
- <script>
-  async function fetchMenu() {
-    try {
-      const response = await fetch('http://localhost:3000/api/foods');
-      const result = await response.json();
-      
-      const container = document.getElementById('food-container');
-      container.innerHTML = '';
+  <div class="main-layout">
+    <!-- Food Menu List -->
+    <div class="menu-section">
+      <div id="food-container" class="grid">Loading menu items...</div>
+    </div>
 
-      if (result.data && result.data.length > 0) {
-        result.data.forEach(item => {
-          container.innerHTML += `
-            <div class="card">
-              <h3>${item.name}</h3>
-              <p><span class="tag">${item.category}</span></p>
-              <p class="price">₹${item.price}</p>
-              <p>⭐ ${item.rating}</p>
-              <button class="btn" onclick="placeOrder('${item.name}', ${item.price})">Order Now</button>
-            </div>
-          `;
-        });
-      } else {
-        container.innerText = 'No food items found.';
+    <!-- Shopping Cart Panel -->
+    <div class="cart-section">
+      <h2>🛒 Your Cart</h2>
+      <div id="cart-container">Your cart is empty.</div>
+      <div class="cart-total" id="cart-total">Total: ₹0</div>
+      <button class="btn btn-checkout" onclick="checkoutCart()">Place Order</button>
+    </div>
+  </div>
+
+  <script>
+    const API_BASE_URL = 'https://food-app-backend-cifu.onrender.com';
+    let cart = [];
+
+    // Default fallback image if food item has no URL
+    const DEFAULT_IMAGE = 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=300&q=80';
+
+    async function fetchMenu() {
+      try {
+        const response = await fetch(`${API_BASE_URL}/api/foods`);
+        const result = await response.json();
+        
+        const container = document.getElementById('food-container');
+        container.innerHTML = '';
+
+        if (result.data && result.data.length > 0) {
+          result.data.forEach(item => {
+            const imageUrl = item.image || DEFAULT_IMAGE;
+            container.innerHTML += `
+              <div class="card">
+                <div>
+                  <img src="${imageUrl}" alt="${item.name}" />
+                  <h3>${item.name}</h3>
+                  <p><span class="tag">${item.category}</span></p>
+                  <p class="price">₹${item.price}</p>
+                  <p>⭐ ${item.rating}</p>
+                </div>
+                <button class="btn" onclick="addToCart('${item.name}', ${item.price})">+ Add to Cart</button>
+              </div>
+            `;
+          });
+        } else {
+          container.innerText = 'No food items found.';
+        }
+      } catch (err) {
+        console.error(err);
+        document.getElementById('food-container').innerText = 'Failed to load menu.';
       }
-    } catch (err) {
-      console.error(err);
-      document.getElementById('food-container').innerText = 'Failed to load menu.';
     }
-  }
 
-  // Function to place a real order to MongoDB
-  async function placeOrder(foodName, price) {
-    const customerName = prompt('Enter your name:');
-    if (!customerName) return;
+    function addToCart(name, price) {
+      const existing = cart.find(item => item.name === name);
+      if (existing) {
+        existing.quantity += 1;
+      } else {
+        cart.push({ name, price, quantity: 1 });
+      }
+      renderCart();
+    }
 
-    const deliveryAddress = prompt('Enter delivery address:');
-    if (!deliveryAddress) return;
+    function renderCart() {
+      const container = document.getElementById('cart-container');
+      const totalEl = document.getElementById('cart-total');
+      
+      if (cart.length === 0) {
+        container.innerHTML = 'Your cart is empty.';
+        totalEl.innerText = 'Total: ₹0';
+        return;
+      }
 
-    try {
-      const response = await fetch('http://localhost:3000/api/orders', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          customerName,
-          deliveryAddress,
-          items: [{ name: foodName, price, quantity: 1 }],
-          totalPrice: price
-        })
+      container.innerHTML = '';
+      let total = 0;
+
+      cart.forEach(item => {
+        const itemTotal = item.price * item.quantity;
+        total += itemTotal;
+        container.innerHTML += `
+          <div class="cart-item">
+            <div>
+              <div class="cart-item-title">${item.name}</div>
+              <small>₹${item.price} x ${item.quantity}</small>
+            </div>
+            <div>
+              <strong>₹${itemTotal}</strong>
+            </div>
+          </div>
+        `;
       });
 
-      const result = await response.json();
-      if (result.success) {
-        alert(`Order placed successfully for ${customerName}! Order ID: ${result.data._id}`);
-      } else {
-        alert('Failed to place order.');
-      }
-    } catch (err) {
-      console.error(err);
-      alert('Error placing order. Is the server running?');
+      totalEl.innerText = `Total: ₹${total}`;
     }
-  }
 
-  fetchMenu();
-</script>
+    async function checkoutCart() {
+      if (cart.length === 0) {
+        alert('Your cart is empty! Add items first.');
+        return;
+      }
+
+      const customerName = prompt('Enter your name:');
+      if (!customerName) return;
+
+      const deliveryAddress = prompt('Enter delivery address:');
+      if (!deliveryAddress) return;
+
+      const totalPrice = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+
+      try {
+        const response = await fetch(`${API_BASE_URL}/api/orders`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            customerName,
+            deliveryAddress,
+            items: cart,
+            totalPrice
+          })
+        });
+
+        const result = await response.json();
+        if (result.success) {
+          alert(`Order placed successfully for ${customerName}! Order ID: ${result.data._id}`);
+          cart = [];
+          renderCart();
+        } else {
+          alert('Failed to place order.');
+        }
+      } catch (err) {
+        console.error(err);
+        alert('Error placing order.');
+      }
+    }
+
+    fetchMenu();
+  </script>
+</body>
+</html>

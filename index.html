@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Food Delivery App</title>
+  <style>
+    body { font-family: Arial, sans-serif; background: #f4f4f9; padding: 20px; }
+    h1 { text-align: center; color: #333; }
+    .grid { display: flex; gap: 20px; justify-content: center; flex-wrap: wrap; margin-top: 20px; }
+    .card { background: white; padding: 20px; border-radius: 10px; width: 220px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+    .card h3 { margin: 0 0 10px 0; color: #2c3e50; }
+    .price { font-weight: bold; color: #27ae60; font-size: 1.1em; }
+    .tag { background: #eee; padding: 3px 8px; border-radius: 5px; font-size: 0.8em; }
+    .btn { margin-top: 15px; width: 100%; padding: 8px; background: #e67e22; color: white; border: none; border-radius: 5px; cursor: pointer; }
+    .btn:hover { background: #d35400; }
+  </style>
+</head>
+<body>
+
+  <h1>🍕 Food Menu</h1>
+  <div id="food-container" class="grid">Loading menu items...</div>
+
+ <script>
+  async function fetchMenu() {
+    try {
+      const response = await fetch('http://localhost:3000/api/foods');
+      const result = await response.json();
+      
+      const container = document.getElementById('food-container');
+      container.innerHTML = '';
+
+      if (result.data && result.data.length > 0) {
+        result.data.forEach(item => {
+          container.innerHTML += `
+            <div class="card">
+              <h3>${item.name}</h3>
+              <p><span class="tag">${item.category}</span></p>
+              <p class="price">₹${item.price}</p>
+              <p>⭐ ${item.rating}</p>
+              <button class="btn" onclick="placeOrder('${item.name}', ${item.price})">Order Now</button>
+            </div>
+          `;
+        });
+      } else {
+        container.innerText = 'No food items found.';
+      }
+    } catch (err) {
+      console.error(err);
+      document.getElementById('food-container').innerText = 'Failed to load menu.';
+    }
+  }
+
+  // Function to place a real order to MongoDB
+  async function placeOrder(foodName, price) {
+    const customerName = prompt('Enter your name:');
+    if (!customerName) return;
+
+    const deliveryAddress = prompt('Enter delivery address:');
+    if (!deliveryAddress) return;
+
+    try {
+      const response = await fetch('http://localhost:3000/api/orders', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          customerName,
+          deliveryAddress,
+          items: [{ name: foodName, price, quantity: 1 }],
+          totalPrice: price
+        })
+      });
+
+      const result = await response.json();
+      if (result.success) {
+        alert(`Order placed successfully for ${customerName}! Order ID: ${result.data._id}`);
+      } else {
+        alert('Failed to place order.');
+      }
+    } catch (err) {
+      console.error(err);
+      alert('Error placing order. Is the server running?');
+    }
+  }
+
+  fetchMenu();
+</script>

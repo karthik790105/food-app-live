@@ -33,7 +33,7 @@ const orderSchema = new mongoose.Schema({
 const Food = mongoose.model('Food', foodSchema);
 const Order = mongoose.model('Order', orderSchema);
 
-// API Routes
+// API Routes - FOODS
 
 // 1. Get all foods
 app.get('/api/foods', async (req, res) => {
@@ -45,7 +45,30 @@ app.get('/api/foods', async (req, res) => {
   }
 });
 
-// 2. Get all orders
+// 2. Add a new food item (NEW ROUTE)
+app.post('/api/foods', async (req, res) => {
+  try {
+    const newFood = new Food(req.body);
+    await newFood.save();
+    res.status(201).json({ success: true, data: newFood });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// 3. Delete a food item (NEW ROUTE)
+app.delete('/api/foods/:id', async (req, res) => {
+  try {
+    await Food.findByIdAndDelete(req.params.id);
+    res.json({ success: true, message: 'Food item deleted successfully' });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// API Routes - ORDERS
+
+// 4. Get all orders
 app.get('/api/orders', async (req, res) => {
   try {
     const orders = await Order.find();
@@ -55,7 +78,7 @@ app.get('/api/orders', async (req, res) => {
   }
 });
 
-// 3. Create a new order
+// 5. Create a new order
 app.post('/api/orders', async (req, res) => {
   try {
     const newOrder = new Order(req.body);
@@ -66,7 +89,7 @@ app.post('/api/orders', async (req, res) => {
   }
 });
 
-// 4. Update order status (THE MISSING ROUTE!)
+// 6. Update order status
 app.patch('/api/orders/:id', async (req, res) => {
   try {
     const { status } = req.body;

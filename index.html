@@ -19,13 +19,18 @@
     .chip { padding: 6px 14px; background: #e0e0e0; border: none; border-radius: 20px; cursor: pointer; font-weight: bold; font-size: 0.9rem; color: #555; }
     .chip.active, .chip:hover { background: #e67e22; color: white; }
 
-    /* Order Tracking Box */
+    /* Order Tracker Box */
     .tracker-card { max-width: 1100px; margin: 0 auto 25px auto; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); text-align: center; }
     .tracker-input-group { display: flex; gap: 10px; justify-content: center; margin-top: 10px; flex-wrap: wrap; }
     .tracker-input { padding: 8px 15px; border: 1px solid #ccc; border-radius: 5px; width: 280px; }
     .tracker-btn { padding: 8px 18px; background: #2980b9; color: white; border: none; border-radius: 5px; font-weight: bold; cursor: pointer; }
     .tracker-btn:hover { background: #3498db; }
     .status-display { margin-top: 15px; font-weight: bold; font-size: 1.1rem; color: #2c3e50; display: none; }
+
+    /* History Pills */
+    .history-list { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin-top: 12px; }
+    .history-pill { background: #f0f3f6; border: 1px solid #cbd5e1; padding: 4px 10px; border-radius: 15px; font-size: 0.85rem; cursor: pointer; color: #334155; font-weight: 600; }
+    .history-pill:hover { background: #e2e8f0; border-color: #94a3b8; }
 
     .main-layout { display: flex; gap: 20px; max-width: 1100px; margin: 0 auto; flex-wrap: wrap; }
     .menu-section { flex: 2; min-width: 300px; }
@@ -61,6 +66,12 @@
       <button class="tracker-btn" onclick="trackOrder()">Track Order</button>
     </div>
     <div id="status-display" class="status-display"></div>
+
+    <!-- Saved Orders Quick Links -->
+    <div id="history-container" style="margin-top: 15px; display: none;">
+      <small style="color: #64748b; font-weight: bold;">Your Recent Orders (Click to Track):</small>
+      <div id="history-pills" class="history-list"></div>
+    </div>
   </div>
 
   <!-- Search & Category Filters -->
@@ -227,9 +238,13 @@
 
         const result = await response.json();
         if (result.success) {
-          alert(`Order placed successfully for ${customerName}!\n\nSave your Order ID to track it:\n${result.data._id}`);
-          // Auto fill order ID into tracking input box
-          document.getElementById('track-order-id').value = result.data._id;
+          const orderId = result.data._id;
+          alert(`Order placed successfully for ${customerName}!\n\nSave your Order ID to track it:\n${orderId}`);
+          
+          // Save order to Local Storage history
+          saveOrderToHistory(orderId, totalPrice);
+          
+          document.getElementById('track-order-id').value = orderId;
           cart = [];
           renderCart();
           trackOrder();
@@ -268,7 +283,7 @@
             if (match.status === 'Out for Delivery') statusEmoji = '🛵';
             if (match.status === 'Delivered') statusEmoji = '🎉';
 
-            statusDisplay.innerHTML = `Order Status: <span style="color: #e67e22;">${match.status || 'Pending'} ${statusEmoji}</span><br><small style="font-size:0.8rem; font-weight:normal; color:#666;">Customer: ${match.customerName}</small>`;
+            statusDisplay.innerHTML = `Order Status: <span style="color: #e67e22;">${match.status || 'Pending'} ${statusEmoji}</span><br><small style="font-size:0.8rem; font-weight:normal; color:#666;">Customer: ${match.customerName} | Total: ₹${match.totalPrice}</small>`;
           } else {
             statusDisplay.innerText = '❌ Order ID not found. Check the ID and try again.';
           }
@@ -279,7 +294,43 @@
       }
     }
 
+    // Local Storage History Helper Functions
+    function saveOrderToHistory(orderId, price) {
+      let history = JSON.parse(localStorage.getItem('my_orders') || '[]');
+      history.unshift({ id: orderId, price, date: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) });
+      localStorage.setItem('my_orders', JSON.stringify(history.slice(0, 5))); // Keep last 5
+      renderHistory();
+    }
+
+    function renderHistory() {
+      const history = JSON.parse(localStorage.getItem('my_orders') || '[]');
+      const container = document.getElementById('history-container');
+      const pillsContainer = document.getElementById('history-pills');
+
+      if (history.length === 0) {
+        container.style.display = 'none';
+        return;
+      }
+
+      container.style.display = 'block';
+      pillsContainer.innerHTML = '';
+
+      history.forEach(item => {
+        pillsContainer.innerHTML += `
+          <div class="history-pill" onclick="quickTrack('${item.id}')">
+            #${item.id.slice(-6)} (₹${item.price}) - ${item.date}
+          </div>
+        `;
+      });
+    }
+
+    function quickTrack(orderId) {
+      document.getElementById('track-order-id').value = orderId;
+      trackOrder();
+    }
+
     fetchMenu();
+    renderHistory();
   </script>
 </body>
 </html>

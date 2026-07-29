@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Local Taste - Manage Menu</title>
+  <style>
+    body { font-family: Arial, sans-serif; background: #f4f4f9; padding: 20px; margin: 0; }
+    h1 { text-align: center; color: #333; margin-bottom: 5px; }
+    .nav { text-align: center; margin-bottom: 20px; }
+    .nav a { color: #e67e22; text-decoration: none; font-weight: bold; margin: 0 10px; }
+
+    .container { max-width: 900px; margin: 0 auto; display: flex; gap: 20px; flex-wrap: wrap; }
+    .form-card { flex: 1; min-width: 280px; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); height: fit-content; }
+    .menu-card { flex: 2; min-width: 320px; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+
+    .form-group { margin-bottom: 15px; }
+    .form-group label { display: block; font-weight: bold; margin-bottom: 5px; color: #333; }
+    .form-group input, .form-group select { width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 5px; box-sizing: border-box; }
+
+    .btn { width: 100%; padding: 10px; background: #27ae60; color: white; border: none; border-radius: 5px; font-weight: bold; cursor: pointer; }
+    .btn:hover { background: #219150; }
+
+    .item-row { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding: 10px 0; }
+    .item-info { display: flex; align-items: center; gap: 10px; }
+    .item-info img { width: 50px; height: 50px; object-fit: cover; border-radius: 6px; }
+    .btn-delete { background: #e74c3c; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-weight: bold; }
+    .btn-delete:hover { background: #c0392b; }
+  </style>
+</head>
+<body>
+
+  <h1>🍔 Menu Management</h1>
+  <div class="nav">
+    <a href="index.html">← Customer Menu</a> | 
+    <a href="orders.html">Orders Dashboard →</a>
+  </div>
+
+  <div class="container">
+    <!-- Add Food Form -->
+    <div class="form-card">
+      <h3>➕ Add New Item</h3>
+      <div class="form-group">
+        <label>Dish Name</label>
+        <input type="text" id="food-name" placeholder="e.g. Garlic Bread" />
+      </div>
+      <div class="form-group">
+        <label>Category</label>
+        <select id="food-category">
+          <option value="Pizza">Pizza</option>
+          <option value="Burger">Burger</option>
+          <option value="Main Course">Main Course</option>
+          <option value="Drinks">Drinks</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Price (₹)</label>
+        <input type="number" id="food-price" placeholder="150" />
+      </div>
+      <div class="form-group">
+        <label>Rating (1 to 5)</label>
+        <input type="number" id="food-rating" step="0.1" placeholder="4.5" />
+      </div>
+      <div class="form-group">
+        <label>Image URL (Optional)</label>
+        <input type="text" id="food-image" placeholder="https://..." />
+      </div>
+      <button class="btn" onclick="addFoodItem()">Add to Menu</button>
+    </div>
+
+    <!-- Current Menu Items -->
+    <div class="menu-card">
+      <h3>📋 Existing Menu Items</h3>
+      <div id="items-list">Loading items...</div>
+    </div>
+  </div>
+
+  <script>
+    const API_BASE_URL = 'https://food-app-backend-cifu.onrender.com';
+
+    async function fetchItems() {
+      try {
+        const response = await fetch(`${API_BASE_URL}/api/foods`);
+        const result = await response.json();
+        const container = document.getElementById('items-list');
+        container.innerHTML = '';
+
+        if (result.data && result.data.length > 0) {
+          result.data.forEach(item => {
+            const img = item.image || 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=100&q=80';
+            container.innerHTML += `
+              <div class="item-row">
+                <div class="item-info">
+                  <img src="${img}" alt="${item.name}" />
+                  <div>
+                    <strong>${item.name}</strong> (${item.category})<br>
+                    <small style="color: #27ae60; font-weight: bold;">₹${item.price}</small> | <small>⭐ ${item.rating}</small>
+                  </div>
+                </div>
+                <button class="btn-delete" onclick="deleteItem('${item._id}')">Delete</button>
+              </div>
+            `;
+          });
+        } else {
+          container.innerHTML = '<p>No items in menu.</p>';
+        }
+      } catch (err) {
+        console.error(err);
+        document.getElementById('items-list').innerText = 'Failed to load items.';
+      }
+    }
+
+    async function addFoodItem() {
+      const name = document.getElementById('food-name').value.trim();
+      const category = document.getElementById('food-category').value;
+      const price = parseFloat(document.getElementById('food-price').value);
+      const rating = parseFloat(document.getElementById('food-rating').value) || 4.2;
+      const image = document.getElementById('food-image').value.trim();
+
+      if (!name || isNaN(price)) {
+        alert('Please provide a valid dish name and price.');
+        return;
+      }
+
+      try {
+        const response = await fetch(`${API_BASE_URL}/api/foods`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name, category, price, rating, image })
+        });
+
+        const result = await response.json();
+        if (result.success) {
+          alert(`Added ${name} to menu!`);
+          document.getElementById('food-name').value = '';
+          document.getElementById('food-price').value = '';
+          document.getElementById('food-image').value = '';
+          fetchItems();
+        }
+      } catch (err) {
+        console.error(err);
+        alert('Error adding item.');
+      }
+    }
+
+    async function deleteItem(id) {
+      if (!confirm('Are you sure you want to remove this item?')) return;
+
+      try {
+        const response = await fetch(`${API_BASE_URL}/api/foods/${id}`, {
+          method: 'DELETE'
+        });
+        const result = await response.json();
+        if (result.success) {
+          fetchItems();
+        }
+      } catch (err) {
+        console.error(err);
+        alert('Error deleting item.');
+      }
+    }
+
+    fetchItems();
+  </script>
+</body>
+</html>

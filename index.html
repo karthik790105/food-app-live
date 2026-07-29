@@ -11,6 +11,14 @@
     .nav { text-align: center; margin-bottom: 20px; }
     .nav a { color: #e67e22; text-decoration: none; font-weight: bold; }
 
+    /* Search and Filter Styling */
+    .filter-container { max-width: 1100px; margin: 0 auto 20px auto; display: flex; flex-direction: column; gap: 10px; align-items: center; }
+    .search-bar { width: 100%; max-width: 500px; padding: 10px 15px; border: 2px solid #ddd; border-radius: 25px; font-size: 1rem; outline: none; transition: border 0.2s; }
+    .search-bar:focus { border-color: #e67e22; }
+    .categories { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
+    .chip { padding: 6px 14px; background: #e0e0e0; border: none; border-radius: 20px; cursor: pointer; font-weight: bold; font-size: 0.9rem; color: #555; }
+    .chip.active, .chip:hover { background: #e67e22; color: white; }
+
     .main-layout { display: flex; gap: 20px; max-width: 1100px; margin: 0 auto; flex-wrap: wrap; }
     .menu-section { flex: 2; min-width: 300px; }
     .cart-section { flex: 1; min-width: 280px; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); height: fit-content; position: sticky; top: 20px; }
@@ -37,13 +45,25 @@
   <h1>🍕 Local Taste</h1>
   <div class="nav"><a href="orders.html">Go to Admin Orders Dashboard →</a></div>
 
+  <!-- Search & Category Filters -->
+  <div class="filter-container">
+    <input type="text" id="search-input" class="search-bar" placeholder="🔍 Search dishes (e.g. Pizza, Burger)..." oninput="applyFilters()" />
+    <div class="categories" id="category-chips">
+      <button class="chip active" onclick="selectCategory('All', this)">All</button>
+      <button class="chip" onclick="selectCategory('Pizza', this)">Pizza</button>
+      <button class="chip" onclick="selectCategory('Burger', this)">Burger</button>
+      <button class="chip" onclick="selectCategory('Main Course', this)">Main Course</button>
+      <button class="chip" onclick="selectCategory('Drinks', this)">Drinks</button>
+    </div>
+  </div>
+
   <div class="main-layout">
-    <!-- Food Menu List -->
+    <!-- Menu -->
     <div class="menu-section">
       <div id="food-container" class="grid">Loading menu items...</div>
     </div>
 
-    <!-- Shopping Cart Panel -->
+    <!-- Cart -->
     <div class="cart-section">
       <h2>🛒 Your Cart</h2>
       <div id="cart-container">Your cart is empty.</div>
@@ -54,42 +74,69 @@
 
   <script>
     const API_BASE_URL = 'https://food-app-backend-cifu.onrender.com';
+    let allMenuItems = [];
+    let activeCategory = 'All';
     let cart = [];
 
-    // Default fallback image if food item has no URL
     const DEFAULT_IMAGE = 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=300&q=80';
 
     async function fetchMenu() {
       try {
         const response = await fetch(`${API_BASE_URL}/api/foods`);
         const result = await response.json();
-        
-        const container = document.getElementById('food-container');
-        container.innerHTML = '';
-
-        if (result.data && result.data.length > 0) {
-          result.data.forEach(item => {
-            const imageUrl = item.image || DEFAULT_IMAGE;
-            container.innerHTML += `
-              <div class="card">
-                <div>
-                  <img src="${imageUrl}" alt="${item.name}" />
-                  <h3>${item.name}</h3>
-                  <p><span class="tag">${item.category}</span></p>
-                  <p class="price">₹${item.price}</p>
-                  <p>⭐ ${item.rating}</p>
-                </div>
-                <button class="btn" onclick="addToCart('${item.name}', ${item.price})">+ Add to Cart</button>
-              </div>
-            `;
-          });
-        } else {
-          container.innerText = 'No food items found.';
+        if (result.data) {
+          allMenuItems = result.data;
+          renderMenu(allMenuItems);
         }
       } catch (err) {
         console.error(err);
         document.getElementById('food-container').innerText = 'Failed to load menu.';
       }
+    }
+
+    function renderMenu(items) {
+      const container = document.getElementById('food-container');
+      container.innerHTML = '';
+
+      if (items.length === 0) {
+        container.innerHTML = '<p>No matching food items found.</p>';
+        return;
+      }
+
+      items.forEach(item => {
+        const imageUrl = item.image || DEFAULT_IMAGE;
+        container.innerHTML += `
+          <div class="card">
+            <div>
+              <img src="${imageUrl}" alt="${item.name}" />
+              <h3>${item.name}</h3>
+              <p><span class="tag">${item.category}</span></p>
+              <p class="price">₹${item.price}</p>
+              <p>⭐ ${item.rating}</p>
+            </div>
+            <button class="btn" onclick="addToCart('${item.name}', ${item.price})">+ Add to Cart</button>
+          </div>
+        `;
+      });
+    }
+
+    function selectCategory(category, element) {
+      activeCategory = category;
+      document.querySelectorAll('.chip').forEach(btn => btn.classList.remove('active'));
+      element.classList.add('active');
+      applyFilters();
+    }
+
+    function applyFilters() {
+      const searchQuery = document.getElementById('search-input').value.toLowerCase();
+      
+      const filtered = allMenuItems.filter(item => {
+        const matchesCategory = activeCategory === 'All' || item.category.toLowerCase() === activeCategory.toLowerCase();
+        const matchesSearch = item.name.toLowerCase().includes(searchQuery) || item.category.toLowerCase().includes(searchQuery);
+        return matchesCategory && matchesSearch;
+      });
+
+      renderMenu(filtered);
     }
 
     function addToCart(name, price) {
